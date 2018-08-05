@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/mholt/archiver"
+	"io/ioutil"
 	"time"
 )
 
@@ -26,30 +27,30 @@ func main() {
 
 	n := time.Now()
 	dumpSubdir := n.Format("20060102T150405")
-	dumpDir := os.Getenv("DUMPDIR")
 	bucket := os.Getenv("AWS_BUCKET")
 
-	err = os.Mkdir(fmt.Sprintf("%s/%s", dumpDir, dumpSubdir), 0777)
-	if err != nil {
-		log.Fatal("Failed to create backup directory: %s", err)
-
-	}
 	log.Printf("Start backup to s3://%s/%s\n", bucket, dumpSubdir)
 
+	dir, err := ioutil.TempDir("", "wp-backup")
+	if err != nil {
+		log.Fatal("Failed to create tempdir")
+	}
+	defer os.RemoveAll(dir)
+
 	log.Printf("Start dump database\n")
-	err = DumpDatabase(fmt.Sprintf("%s/%s", dumpDir, dumpSubdir))
+	err = DumpDatabase(dir)
 	if err != nil {
 		log.Fatal("Failed to dump database: %s", err)
 	}
 
 	log.Printf("Start archive wordpress dir\n")
-	err = BackupWordpressFiles(fmt.Sprintf("%s/%s", dumpDir, dumpSubdir))
+	err = BackupWordpressFiles(dir)
 	if err != nil {
 		log.Fatal("Failed to backup wordpress files: %s", err)
 	}
 
 	log.Printf("Start upload backups to S3\n")
-	err = UploadToS3(dumpDir, dumpSubdir)
+	err = UploadToS3(dir, dumpSubdir)
 	if err != nil {
 		log.Fatal("Failed to upload to s3: %s", err)
 	}
@@ -104,7 +105,7 @@ func UploadToS3(dumpDir string, dumpSubdir string) error {
 	paths := []string{"wordpress.zip", "wordpress.sql"}
 
 	for _, f := range paths {
-		dumpFileFormat := fmt.Sprintf("%s/%s/%s", dumpDir, dumpSubdir, f)
+		dumpFileFormat := fmt.Sprintf("%s/%s", dumpDir, f)
 		file, err := os.Open(dumpFileFormat)
 		if err != nil {
 			return errors.New(fmt.Sprintf("Failed to open file: %s", err))
