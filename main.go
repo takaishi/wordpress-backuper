@@ -102,29 +102,36 @@ func UploadToS3(dumpDir string, dumpSubdir string) error {
 	region := os.Getenv("AWS_REGION")
 	bucket := os.Getenv("AWS_BUCKET")
 
-	paths := []string{"wordpress.zip", "wordpress.sql"}
+	cli := s3.New(session.New(), &aws.Config{
+		Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
+		Region:      aws.String(region),
+	})
 
-	for _, f := range paths {
-		dumpFileFormat := fmt.Sprintf("%s/%s", dumpDir, f)
-		file, err := os.Open(dumpFileFormat)
-		if err != nil {
-			return errors.Wrap(err, "Failed to open file")
-		}
-		defer file.Close()
-		cli := s3.New(session.New(), &aws.Config{
-			Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
-			Region:      aws.String(region),
-		})
-
-		_, err = cli.PutObject(&s3.PutObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(fmt.Sprintf("%s/%s", dumpSubdir, f)),
-			Body:   file,
-		})
-
-		if err != nil {
-			return errors.Wrap(err, "Failed to PutObject")
-		}
+	sqlDump, err := os.Open(fmt.Sprintf("%s/%s", dumpDir, "wordpress.sql"))
+	if err != nil {
+		return errors.Wrap(err, "Failed to open file")
 	}
+	defer sqlDump.Close()
+	_, err = cli.PutObject(&s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(fmt.Sprintf("%s/%s", dumpSubdir, "wordpress.sql")),
+		Body:   sqlDump,
+	})
+
+	wpArchive, err := os.Open(fmt.Sprintf("%s/%s", dumpDir, "wordpress.zip"))
+	if err != nil {
+		return errors.Wrap(err, "Failed to open file")
+	}
+	defer wpArchive.Close()
+	_, err = cli.PutObject(&s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(fmt.Sprintf("%s/%s", dumpSubdir, "wordpress.zip")),
+		Body:   wpArchive,
+	})
+
+	if err != nil {
+		return errors.Wrap(err, "Failed to PutObject")
+	}
+
 	return nil
 }
