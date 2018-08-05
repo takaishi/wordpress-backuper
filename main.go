@@ -50,7 +50,7 @@ func main() {
 	}
 
 	log.Printf("Start upload backups to S3\n")
-	err = UploadToS3(dir, dumpSubdir)
+	err = BackupToS3(dir, dumpSubdir)
 	if err != nil {
 		log.Fatalf("Failed to upload to s3: %s\n", err)
 	}
