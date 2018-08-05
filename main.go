@@ -80,7 +80,7 @@ func DumpDatabase(dumpDir string) error {
 	if err != nil {
 		return errors.Wrap(err, "Error dumping: %s")
 	}
-	fmt.Printf("File is saved to %s\n", resultFilename)
+	log.Printf("File is saved to %s\n", resultFilename)
 
 	return nil
 }
