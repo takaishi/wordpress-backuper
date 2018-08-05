@@ -45,7 +45,23 @@ AWS_REGION=${REGION_NAME}
 AWS_BUCKET=${BUCKET_NAME}
 ```
 
+## Development
 
+Sample development environment with [vccw](http://vccw.cc/):
+
+```
+$ vagrant plugin install vagrant-hostsupdater
+$ vagrant box add vccw-team/xenial64
+$ wget https://github.com/vccw-team/vccw/releases/download/3.18.0/vccw-3.18.0.zip
+$ unzip vccw-3.18.0.zip
+$ vagrant up
+```
+
+Build wp_backup for linux:
+
+```
+$ env GOOS=linux GOARCH=amd64 go build -o ./vccw/wp_backup
+```
 
 ## Contribution
 
