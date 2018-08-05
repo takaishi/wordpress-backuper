@@ -96,16 +96,20 @@ func BackupWordpressFiles(dumpDir string) error {
 	return nil
 }
 
-func UploadToS3(dumpDir string, dumpSubdir string) error {
+func BackupToS3(dumpDir string, dumpSubdir string) error {
 	accessKeyID := os.Getenv("AWS_ACCESS_KEY_ID")
 	secretAccessKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	region := os.Getenv("AWS_REGION")
 	bucket := os.Getenv("AWS_BUCKET")
 
-	cli := s3.New(session.New(), &aws.Config{
+	sess, err := session.NewSession(&aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
 		Region:      aws.String(region),
 	})
+	if err != nil {
+		return errors.Wrap(err, "Failed to create session")
+	}
+	cli := s3.New(sess)
 
 	for _, name := range []string{"wordpress.sql", "wordpress.zip"} {
 		err := UploadToS3(cli, fmt.Sprintf("%s/%s", dumpDir, name), bucket, fmt.Sprintf("%s/%s", dumpSubdir, name))
