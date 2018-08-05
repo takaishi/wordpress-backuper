@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"github.com/JamesStewy/go-mysqldump"
 	_ "github.com/go-sql-driver/mysql"
@@ -15,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/mholt/archiver"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"time"
 )
@@ -33,26 +33,26 @@ func main() {
 
 	dir, err := ioutil.TempDir("", "wp-backup")
 	if err != nil {
-		log.Fatal("Failed to create tempdir")
+		log.Fatalf("Failed to create tempdir: %s\n", err)
 	}
 	defer os.RemoveAll(dir)
 
 	log.Printf("Start dump database\n")
 	err = DumpDatabase(dir)
 	if err != nil {
-		log.Fatal("Failed to dump database: %s", err)
+		log.Fatalf("Failed to dump database: %s\n", err)
 	}
 
 	log.Printf("Start archive wordpress dir\n")
 	err = BackupWordpressFiles(dir)
 	if err != nil {
-		log.Fatal("Failed to backup wordpress files: %s", err)
+		log.Fatalf("Failed to backup wordpress files: %s\n", err)
 	}
 
 	log.Printf("Start upload backups to S3\n")
 	err = UploadToS3(dir, dumpSubdir)
 	if err != nil {
-		log.Fatal("Failed to upload to s3: %s", err)
+		log.Fatalf("Failed to upload to s3: %s\n", err)
 	}
 
 	log.Printf("Finish backup to s3://%s/%s\n", bucket, dumpSubdir)
@@ -67,18 +67,18 @@ func DumpDatabase(dumpDir string) error {
 
 	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, hostname, port, dbname))
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error opening database: %s", err))
+		return errors.Wrap(err, "Error opening database: %s")
 	}
 
 	dumper, err := mysqldump.Register(db, dumpDir, "wordpress")
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error registering databse: %s", err))
+		return errors.Wrap(err, "Error registering databse: %s")
 	}
 	defer dumper.Close()
 
 	resultFilename, err := dumper.Dump()
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error dumping: %s", err))
+		return errors.Wrap(err, "Error dumping: %s")
 	}
 	fmt.Printf("File is saved to %s\n", resultFilename)
 
@@ -90,7 +90,7 @@ func BackupWordpressFiles(dumpDir string) error {
 	dumpFileFormat := fmt.Sprintf("%s/wordpress.zip", dumpDir)
 	err := archiver.Zip.Make(dumpFileFormat, []string{backupDir})
 	if err != nil {
-		return errors.New(fmt.Sprintf("Failed to archive: %s", err))
+		return errors.Wrap(err, "Failed to archive")
 	}
 
 	return nil
@@ -108,7 +108,7 @@ func UploadToS3(dumpDir string, dumpSubdir string) error {
 		dumpFileFormat := fmt.Sprintf("%s/%s", dumpDir, f)
 		file, err := os.Open(dumpFileFormat)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Failed to open file: %s", err))
+			return errors.Wrap(err, "Failed to open file")
 		}
 		defer file.Close()
 		cli := s3.New(session.New(), &aws.Config{
@@ -123,7 +123,7 @@ func UploadToS3(dumpDir string, dumpSubdir string) error {
 		})
 
 		if err != nil {
-			return errors.New(fmt.Sprintf("Failed to PutObject: %s", err))
+			return errors.Wrap(err, "Failed to PutObject")
 		}
 	}
 	return nil
