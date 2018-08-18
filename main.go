@@ -179,7 +179,10 @@ func RotateBackup() error {
 			return errors.Wrap(err, "Failed to list object")
 		}
 		for _, o := range result.Contents {
-			DeleteObject(cli, bucket, *o.Key)
+			err := DeleteObject(cli, bucket, *o.Key)
+			if err != nil {
+				return errors.Wrap(err, "Failed to DeleteObject")
+			}
 		}
 	}
 	return nil
@@ -209,7 +212,7 @@ func DeleteObject(cli *s3.S3, bucket string, key string) error {
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		errors.Wrap(err, "Failed to delete object")
+		return errors.Wrap(err, "Failed to delete object")
 	}
 	return nil
 }
