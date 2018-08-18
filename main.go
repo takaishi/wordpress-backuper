@@ -207,6 +207,8 @@ func GetDeletePrefixes(cli *s3.S3, bucket string, backup_size int) ([]string, er
 }
 
 func DeleteObject(cli *s3.S3, bucket string, key string) error {
+	log.Printf("Delete Object: s3://%s/%s\n", bucket, key)
+
 	_, err := cli.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
