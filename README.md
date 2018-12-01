@@ -1,19 +1,13 @@
 
 
-go-wp-backup
+wordpress-backuper
 ====
 
-Backup tool for wordpress written Golang.
+Wordpress backup tool written Golang.
 
 ## Description
 
-go-wp-backup is CLI tool to backup wordpress with AWS S3. Backup target is mysql dump and wordpress directory.
-
-## Demo
-
-## VS. 
-
-## Requirement
+wordpress-backuper is CLI tool to backup wordpress with AWS S3. Backup target is mysql dump and wordpress directory.
 
 ## Usage
 
