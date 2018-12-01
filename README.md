@@ -51,6 +51,12 @@ $ unzip vccw-3.18.0.zip
 $ vagrant up
 ```
 
+
+
+http://vccw.test/
+
+
+
 Build wp_backup for linux:
 
 ```
