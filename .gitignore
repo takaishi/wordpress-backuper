@@ -2,3 +2,4 @@ tmp
 vccw*
 .env
 config.toml
+dist

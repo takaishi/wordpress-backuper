@@ -24,10 +24,10 @@ lint: ## Exec golint
 	golint -min_confidence 1.1 -set_exit_status $(TEST)
 
 build:
-	go build  -ldflags "-X github.com/takaishi/wordpress-backuper/config.Version=$(VERSION)" -o $(BUILD)/wordpress-backuper
+	go build  -ldflags "-X github.com/takaishi/wordpress-backuper/Version=$(VERSION)" -o $(BUILD)/wordpress-backuper
 
 dist: clean
-	goxz -pv=$(VERSION) -os=darwin,linux -arch=amd64 -d=dist -build-ldflags "-X github.com/takaishi/wordpress-backuper/config.Version=$(VERSION)" .
+	goxz -pv=$(VERSION) -os=darwin,linux -arch=amd64 -d=dist -build-ldflags "-X github.com/takaishi/wordpress-backuper/Version=$(VERSION)" .
 
 github_release: ## Create some distribution packages
 	ghr -u takaishi -r wordpress-backuper --replace v$(VERSION) dist/

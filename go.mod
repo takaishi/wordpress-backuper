@@ -1,4 +1,4 @@
-module github.com/takaishi/go-wp-backup
+module github.com/takaishi/wordpress-backuper
 
 require (
 	github.com/BurntSushi/toml v0.3.1
