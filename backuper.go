@@ -35,28 +35,28 @@ func (b *Backuper) Run() error {
 	defer os.RemoveAll(dir)
 
 	log.Printf("Start dump database: %s\n", dir)
-	err = b.DumpDatabase(dir)
+	err = b.dumpDatabase(dir)
 	if err != nil {
 		log.Fatalf("Failed to dump database: %s\n", err)
 		return err
 	}
 
 	log.Printf("Start archive wordpress dir\n")
-	err = b.BackupWordpressFiles(dir)
+	err = b.backupWordpressFiles(dir)
 	if err != nil {
 		log.Fatalf("Failed to backup wordpress files: %s\n", err)
 		return err
 	}
 
 	log.Printf("Start upload backups to S3\n")
-	err = b.BackupToS3(dir, dumpSubdir)
+	err = b.backupToS3(dir, dumpSubdir)
 	if err != nil {
 		log.Fatalf("Failed to upload to s3: %s\n", err)
 		return err
 	}
 
 	log.Printf("Start rotate backups\n")
-	err = b.RotateBackup()
+	err = b.rotateBackup()
 	if err != nil {
 		log.Fatalf("Failed to rotate backups: %s\n", err)
 		return err
@@ -68,7 +68,7 @@ func (b *Backuper) Run() error {
 
 }
 
-func (b *Backuper) DumpDatabase(dumpDir string) error {
+func (b *Backuper) dumpDatabase(dumpDir string) error {
 	username := b.cfg.DB.Username
 	password := b.cfg.DB.Password
 	hostname := b.cfg.DB.Hostname
@@ -95,7 +95,7 @@ func (b *Backuper) DumpDatabase(dumpDir string) error {
 	return nil
 }
 
-func (b *Backuper) BackupWordpressFiles(dumpDir string) error {
+func (b *Backuper) backupWordpressFiles(dumpDir string) error {
 	backupDir := b.cfg.Wordpress.RootDir
 	dumpFileFormat := fmt.Sprintf("%s/wordpress.zip", dumpDir)
 	err := archiver.Zip.Make(dumpFileFormat, []string{backupDir})
@@ -106,7 +106,7 @@ func (b *Backuper) BackupWordpressFiles(dumpDir string) error {
 	return nil
 }
 
-func (b *Backuper) BackupToS3(dumpDir string, dumpSubdir string) error {
+func (b *Backuper) backupToS3(dumpDir string, dumpSubdir string) error {
 	accessKeyID := b.cfg.AWS.AccessKeyID
 	secretAccessKey := b.cfg.AWS.SecretAccessKey
 	region := b.cfg.AWS.Region
@@ -122,7 +122,7 @@ func (b *Backuper) BackupToS3(dumpDir string, dumpSubdir string) error {
 	cli := s3.New(sess)
 
 	for _, name := range []string{"wordpress.sql", "wordpress.zip"} {
-		err := b.UploadToS3(cli, fmt.Sprintf("%s/%s", dumpDir, name), bucket, fmt.Sprintf("%s/%s", dumpSubdir, name))
+		err := b.uploadToS3(cli, fmt.Sprintf("%s/%s", dumpDir, name), bucket, fmt.Sprintf("%s/%s", dumpSubdir, name))
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to upload %s to s3", name))
 		}
@@ -131,7 +131,7 @@ func (b *Backuper) BackupToS3(dumpDir string, dumpSubdir string) error {
 
 }
 
-func (b *Backuper) UploadToS3(cli *s3.S3, path string, bucket string, key string) error {
+func (b *Backuper) uploadToS3(cli *s3.S3, path string, bucket string, key string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return errors.Wrap(err, "Failed to open file")
@@ -151,7 +151,7 @@ func (b *Backuper) UploadToS3(cli *s3.S3, path string, bucket string, key string
 	return nil
 }
 
-func (b *Backuper) RotateBackup() error {
+func (b *Backuper) rotateBackup() error {
 	backup_size := 3
 	accessKeyID := b.cfg.AWS.AccessKeyID
 	secretAccessKey := b.cfg.AWS.SecretAccessKey
@@ -168,7 +168,7 @@ func (b *Backuper) RotateBackup() error {
 
 	cli := s3.New(sess)
 
-	keys, err := b.GetDeletePrefixes(cli, bucket, backup_size)
+	keys, err := b.getDeletePrefixes(cli, bucket, backup_size)
 	if err != nil {
 		return errors.Wrap(err, "Failed to get delete prefixes")
 	}
@@ -183,16 +183,16 @@ func (b *Backuper) RotateBackup() error {
 			return errors.Wrap(err, "Failed to list object")
 		}
 		for _, o := range result.Contents {
-			err := b.DeleteObject(cli, bucket, *o.Key)
+			err := b.deleteObject(cli, bucket, *o.Key)
 			if err != nil {
-				return errors.Wrap(err, "Failed to DeleteObject")
+				return errors.Wrap(err, "Failed to deleteObject")
 			}
 		}
 	}
 	return nil
 }
 
-func (b *Backuper) GetDeletePrefixes(cli *s3.S3, bucket string, backup_size int) ([]string, error) {
+func (b *Backuper) getDeletePrefixes(cli *s3.S3, bucket string, backup_size int) ([]string, error) {
 	var keys []string
 	result, err := cli.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:    aws.String(bucket),
@@ -210,7 +210,7 @@ func (b *Backuper) GetDeletePrefixes(cli *s3.S3, bucket string, backup_size int)
 	return keys, nil
 }
 
-func (b *Backuper) DeleteObject(cli *s3.S3, bucket string, key string) error {
+func (b *Backuper) deleteObject(cli *s3.S3, bucket string, key string) error {
 	log.Printf("Delete Object: s3://%s/%s\n", bucket, key)
 
 	_, err := cli.DeleteObject(&s3.DeleteObjectInput{
