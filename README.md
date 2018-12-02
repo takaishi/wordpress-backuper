@@ -12,7 +12,7 @@ wordpress-backuper is CLI tool to backup wordpress with AWS S3. Backup target is
 ## Usage
 
 ```
-$ sudo /usr/local/bin/wp_backup
+$ wordpress-backuper --config config.toml
 2018/08/05 13:06:17 Start backup to s3://${BUCKET_NAME}/20180805T130617
 2018/08/05 13:06:17 Start dump database
 File is saved to /tmp/wp-backup132075555/wordpress.sql
@@ -23,20 +23,24 @@ File is saved to /tmp/wp-backup132075555/wordpress.sql
 
 ## Install
 
-
-
 ```
-$ cat /etc/wp_backup.env
-BACKUP_DIR=/var/www/html
-DB_USERNAME=${MYSQL_USERNAME}
-DB_PASSWORD=${MYSQL_PASSWORD}
-DB_HOSTNAME=${MYSQL_HOSTNAME}
-DB_PORT=${MYSQL_PORT}
-DB_NAME=${MYSQL_DB_NAME}
-AWS_ACCESS_KEY_ID=${ACCESS_KEY_ID}
-AWS_SECRET_ACCESS_KEY=${SECRET_ACCESS_KEY}
-AWS_REGION=${REGION_NAME}
-AWS_BUCKET=${BUCKET_NAME}
+$ cat config.toml
+[DB]
+username = "MYSQL_USERNAME"
+password = "MYSQL_PASSWORD"
+hostname = "MYSQL_HOSTNAME"
+port     = MYSQL_PORT
+database = "MYSQL_DB_NAME"
+
+[Wordpress]
+root_dir = "/var/www/html"
+
+[AWS]
+access_key_id = "ACCESS_KEY_ID"
+secret_access_key = "SECRET_ACCESS_KEY"
+region = "REGION_NAME"
+bucket = "BUCKET_NAME"
+BACKUP_DIR = "/var/www/html"
 ```
 
 ## Development
@@ -51,19 +55,11 @@ $ unzip vccw-3.18.0.zip
 $ vagrant up
 ```
 
-
-
-http://vccw.test/
-
-
-
-Build wp_backup for linux:
+Build wordpress-backuper for linux:
 
 ```
-$ env GOOS=linux GOARCH=amd64 go build -o ./vccw/wp_backup
+$ env GOOS=linux GOARCH=amd64 go build -o ./vccw/wordpress-backuper
 ```
-
-## Contribution
 
 ## Licence
 
