@@ -1,55 +1,31 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
-	"github.com/JamesStewy/go-mysqldump"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/mholt/archiver"
 	"github.com/pkg/errors"
-	"io/ioutil"
 	"log"
 	"os"
 	"time"
 )
 
 type AWSBackuper struct {
-	cfg Config
+	source string
+	aws    *AWSConfig
 }
 
 func (b *AWSBackuper) Run() error {
 	n := time.Now()
 	dumpSubdir := n.Format("20060102T150405")
-	bucket := b.cfg.AWS.Bucket
+	bucket := b.aws.Bucket
 
 	log.Printf("Start backup to s3://%s/%s\n", bucket, dumpSubdir)
 
-	dir, err := ioutil.TempDir("", "wp-backup")
-	if err != nil {
-		log.Fatalf("Failed to create tempdir: %s\n", err)
-		return err
-	}
-	defer os.RemoveAll(dir)
-
-	log.Printf("Start dump database: %s\n", dir)
-	err = b.dumpDatabase(dir)
-	if err != nil {
-		log.Fatalf("Failed to dump database: %s\n", err)
-		return err
-	}
-
-	log.Printf("Start archive wordpress dir\n")
-	err = b.backupWordpressFiles(dir)
-	if err != nil {
-		log.Fatalf("Failed to backup wordpress files: %s\n", err)
-		return err
-	}
-
 	log.Printf("Start upload backups to S3\n")
-	err = b.backupToS3(dir, dumpSubdir)
+	err := b.backupToS3(b.source, dumpSubdir)
 	if err != nil {
 		log.Fatalf("Failed to upload to s3: %s\n", err)
 		return err
@@ -65,52 +41,13 @@ func (b *AWSBackuper) Run() error {
 	log.Printf("Finish backup to s3://%s/%s\n", bucket, dumpSubdir)
 
 	return nil
-
-}
-
-func (b *AWSBackuper) dumpDatabase(dumpDir string) error {
-	username := b.cfg.DB.Username
-	password := b.cfg.DB.Password
-	hostname := b.cfg.DB.Hostname
-	port := b.cfg.DB.Port
-	dbname := b.cfg.DB.Database
-
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", username, password, hostname, port, dbname))
-	if err != nil {
-		return errors.Wrap(err, "Error opening database: %s")
-	}
-
-	dumper, err := mysqldump.Register(db, dumpDir, "wordpress")
-	if err != nil {
-		return errors.Wrap(err, "Error registering databse: %s")
-	}
-	defer dumper.Close()
-
-	resultFilename, err := dumper.Dump()
-	if err != nil {
-		return errors.Wrap(err, "Error dumping: %s")
-	}
-	log.Printf("File is saved to %s\n", resultFilename)
-
-	return nil
-}
-
-func (b *AWSBackuper) backupWordpressFiles(dumpDir string) error {
-	backupDir := b.cfg.Wordpress.RootDir
-	dumpFileFormat := fmt.Sprintf("%s/wordpress.zip", dumpDir)
-	err := archiver.Zip.Make(dumpFileFormat, []string{backupDir})
-	if err != nil {
-		return errors.Wrap(err, "Failed to archive")
-	}
-
-	return nil
 }
 
 func (b *AWSBackuper) backupToS3(dumpDir string, dumpSubdir string) error {
-	accessKeyID := b.cfg.AWS.AccessKeyID
-	secretAccessKey := b.cfg.AWS.SecretAccessKey
-	region := b.cfg.AWS.Region
-	bucket := b.cfg.AWS.Bucket
+	accessKeyID := b.aws.AccessKeyID
+	secretAccessKey := b.aws.SecretAccessKey
+	region := b.aws.Region
+	bucket := b.aws.Bucket
 
 	sess, err := session.NewSession(&aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
@@ -153,10 +90,10 @@ func (b *AWSBackuper) uploadToS3(cli *s3.S3, path string, bucket string, key str
 
 func (b *AWSBackuper) rotateBackup() error {
 	backup_size := 3
-	accessKeyID := b.cfg.AWS.AccessKeyID
-	secretAccessKey := b.cfg.AWS.SecretAccessKey
-	region := b.cfg.AWS.Region
-	bucket := b.cfg.AWS.Bucket
+	accessKeyID := b.aws.AccessKeyID
+	secretAccessKey := b.aws.SecretAccessKey
+	region := b.aws.Region
+	bucket := b.aws.Bucket
 
 	sess, err := session.NewSession(&aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),

@@ -4,11 +4,15 @@ import (
 	"github.com/BurntSushi/toml"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/urfave/cli"
+	"io/ioutil"
 	"log"
 	"os"
 )
 
 var Version string
+
+const DB_DUMP_FILE = "wordpress.sql"
+const WORDPRESS_FILE = "wordpress.zip"
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
@@ -37,15 +41,28 @@ func action(c *cli.Context) error {
 		return err
 	}
 
+	dir, err := ioutil.TempDir("", "wp-backup")
+	if err != nil {
+		log.Fatalf("Failed to create tempdir: %s\n", err)
+		return err
+	}
+	defer os.RemoveAll(dir)
+
+	dumper := Dumper{db: config.DB, destination: dir}
+	err = dumper.Run()
+	if err != nil {
+		log.Fatalf("Failed to dump: %s\n", err)
+		return err
+	}
+
 	if config.AWS != nil {
-		backuper := AWSBackuper{cfg: config}
+		backuper := AWSBackuper{source: dir, aws: config.AWS}
 		return backuper.Run()
 	}
 
 	if config.Local != nil {
 		backuper := LocalBackuper{
-			db:          config.DB,
-			wpRootDir:   config.Wordpress.RootDir,
+			source:      dir,
 			destination: config.Local.Destination,
 		}
 		return backuper.Run()
