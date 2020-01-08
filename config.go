@@ -3,7 +3,8 @@ package main
 type Config struct {
 	DB        DBConfig        `toml:"DB"`
 	Wordpress WordpressConfig `toml:"Wordpress"`
-	AWS       AWSConfig       `toml:"AWS"`
+	AWS       *AWSConfig      `toml:"AWS"`
+	Local     *LocalConfig    `toml:"Local"`
 }
 
 type DBConfig struct {
@@ -23,4 +24,8 @@ type AWSConfig struct {
 	SecretAccessKey string `toml:"secret_access_key"`
 	Region          string `toml:"region"`
 	Bucket          string `toml:"bucket"`
+}
+
+type LocalConfig struct {
+	Destination string `toml:"destination"`
 }

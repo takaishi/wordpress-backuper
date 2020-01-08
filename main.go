@@ -37,7 +37,18 @@ func action(c *cli.Context) error {
 		return err
 	}
 
-	backuper := Backuper{cfg: config}
+	if config.AWS != nil {
+		backuper := AWSBackuper{cfg: config}
+		return backuper.Run()
+	}
 
-	return backuper.Run()
+	if config.Local != nil {
+		backuper := LocalBackuper{
+			db:          config.DB,
+			wpRootDir:   config.Wordpress.RootDir,
+			destination: config.Local.Destination,
+		}
+		return backuper.Run()
+	}
+	return nil
 }
