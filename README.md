@@ -35,6 +35,9 @@ database = "MYSQL_DB_NAME"
 [Wordpress]
 root_dir = "/var/www/html"
 
+[Local]
+destination = "/tmp/backup"
+
 [AWS]
 access_key_id = "ACCESS_KEY_ID"
 secret_access_key = "SECRET_ACCESS_KEY"
