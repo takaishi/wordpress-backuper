@@ -48,7 +48,7 @@ func action(c *cli.Context) error {
 	}
 	defer os.RemoveAll(dir)
 
-	dumper := Dumper{db: config.DB, destination: dir}
+	dumper := Dumper{db: config.DB, wpRootDir: config.Wordpress.RootDir, destination: dir}
 	err = dumper.Run()
 	if err != nil {
 		log.Fatalf("Failed to dump: %s\n", err)
